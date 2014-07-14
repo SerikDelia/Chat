@@ -1,0 +1,285 @@
+<DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Chat</title>
+<link rel="stylesheet" type="text/css" href="/stylesheets/Css/style.css">
+<script src="socket.io/socket.io.js"></script>
+</head>
+<body onload="return false" reset="return false;">
+<span id="name"><%=user.username%></span><br>
+<span id="_id"><%=user._id%></span>
+<div id="tabbed_box_1" class="tabbed_box">
+    <h4>Heading</h4>
+   <div  class="tabbed_area">
+	  
+	  <ul class="tabs">
+          <li><a href="javascript:tabSwitch('tab_1', 'content_1');" id="tab_1" class="active">Users</a></li>
+          <li><a href="javascript:tabSwitch('tab_2', 'content_2');" id="tab_2" >Миллер</a></li>
+          <li><a href="javascript:tabSwitch('tab_3', 'content_3');" id="tab_3">Черчилль</a></li>
+       </ul>
+<!-- Это контейнеры содержимого -->    
+       <div id="content_1" class="content">
+          <h2>Users</h2>
+          <p>contant1 </p>
+       </div>
+   
+       <div id="content_2" class="content">
+          <h2>Миллер</h2>
+          <p>content2</p>
+       </div>
+  
+       <div id="content_3" class="content">
+          <h2>Черчилль</h2>
+          <p>content 3</p>
+       </div>
+  
+  </div>
+</div>
+<div align="center" id="chat">
+    <ul></ul>
+        <form  name="work" onsubmit="return false;">
+            <input class="form-control"  autocomplete="off" autofocus placeholder="Message">
+          <input type="button" onclick="javascript:send()">
+        </form>
+    <form method="post" action="/logout">
+        <input type="submit" value="Logout" onclick="socket.emit('disconnectUser', username);">
+    </form>
+    <div>
+        <span>List participant</span>
+        <ul id="listParticipant">
+       
+        </ul>
+    </div>
+</div>
+<script>
+    var socket=io.connect();
+    var flagIsConnected=true;
+    var flagisred=false;
+    var form=document.querySelector('#chat>form');
+    var ul=document.querySelector('#chat>ul');
+    var username=document.querySelector('#name').innerHTML;
+    var currentUserArray= new Array();
+	var timer;
+    var timerUsers;
+	var listUser = new Array();
+	//var elements=document.getElementsByClassName("userOn");
+ 
+ 
+ function stopTimer(){
+  clearInterval(timer);
+ };
+ 
+function isConnect(username){
+ if(!flagisred){
+ printStatus("connection is lost "+username);
+ flagisred=true;
+ };
+
+if(!flagIsConnected){	
+console.log("connect lost");
+}else{
+console.log("connect is fixed");
+}
+};
+ function startTimer(username){
+  timer = setInterval("isConnect(username);",3000);
+ };
+//function printUsersList(){
+//var ulUs = document.querySelector('#listParticipant');
+//for(var name in currentUserArray){		   
+		    
+//			console.log("ffffff "+currentUserArray[name]);
+	//	   if(currentUserArray[name]===1){		   
+	//	    console.log("ffffff "+currentUserArray[name]);
+	//		var li = document.createElement('LI');
+     //       li.innerHTML =name;
+   //         ul.appendChild(li);
+	//	   };
+	//	};	 
+
+
+//}
+//--------------------------------------------------------------------------
+//old function wich determin how is come;
+
+    //window.onload=socket.emit('conn',username,function(data){
+      //  printStatus(username+" > "+"вошел в чат");
+    //});
+    //window.onload=socket.emit('loadAllUser',function(data){
+
+    //});
+//---------------------------------------------------------------------------	
+   
+function tabSwitch(new_tab, new_content) {
+
+        document.getElementById('content_1').style.display = 'none';
+        document.getElementById('content_2').style.display = 'none';
+        document.getElementById('content_3').style.display = 'none';
+        document.getElementById(new_content).style.display = 'block';   
+
+        document.getElementById('tab_1').className = '';
+        document.getElementById('tab_2').className = '';
+        document.getElementById('tab_3').className = '';
+        document.getElementById(new_tab).className = 'active';          
+
+}
+
+
+
+   function send() {
+            var input = document.querySelector('.form-control');
+            var text = input.value;
+            input.value = '';
+            console.log("this is username="+username);
+            socket.emit('message',username, text,function(data){
+
+                printMessage(username+" > "+text);
+            });
+            return false;
+    };
+    
+	function printMessage(text) {
+        var ul = document.querySelector('#chat>ul');
+        var li = document.createElement('LI');
+        li.innerHTML = text;
+        ul.appendChild(li);
+    };
+
+    function printStatus(status) {
+        var ul = document.querySelector('#chat>ul');
+        var li = document.createElement('LI');
+        var i = document.createElement('i');
+        i.innerHTML = status;
+
+        li.appendChild(i);
+        ul.appendChild(li);
+    };
+	
+	
+    socket.on('message', function(usernameLoad,text ,callback){
+      printMessage(usernameLoad+" > "+text);
+    });
+	
+	socket.on('connect',function(){
+	
+	  printStatus("Connection is done");
+	
+	if(!flagIsConnected){
+	
+	  var getList="Upload";
+	
+	  socket.emit('connectUpload',getList);
+	}
+	socket.on('connectUpload',function(usrArray){
+	   console.log("renders");
+	
+	    var ulUs = document.querySelector('#listParticipant'); 
+		
+		
+		if(listUser){
+		  for(var u=0; u<listUser.length; u++){    
+		   console.log("remov li into "+listUser[u].innerHTML);
+		   ulUs.removeChild(listUser[u]);  
+         }
+		listUser.splice(0,listUser.length); 
+		  }
+		
+		for(var i=0; i<usrArray.length; i++){
+		console.log(""+i+"  "+usrArray[i]);
+		var li = document.createElement('LI');
+            li.className="userOn";
+			li.innerHTML =usrArray[i];
+            listUser.push(li);
+ 		    ulUs.appendChild(li);
+		 console.log("create li "+li.innerHTML);
+		}	
+	});	
+	
+	 if(!flagIsConnected){
+	  stopTimer();
+	  flagIsConnected = true;
+	  flagisred=false;  
+	 }
+	
+	});
+	
+	socket.on('connection', function(){
+	 
+	 socket.emit('connectUser', username);	
+	
+	});
+	
+	socket.on('disconnect', function(){
+	flagIsConnected =false;
+	startTimer(username);
+    return;
+	
+     });
+    
+	
+	 socket.on('connectUser', function(username){
+	 	
+	           printMessage(username+" > is connected");
+			   console.log(username+"connect ");	
+	
+	});
+	
+	socket.on('disconnectUser', function(username){
+	  printMessage(username+" > is disconnected");
+		   console.log(username);
+      var ulUs = document.querySelector('#listParticipant'); 
+	       console.log("search");
+		  
+		 for(var i=0; i<listUser.length ;i++){
+		console.log("search out "+listUser[i].innerHTML );
+		if(listUser[i].innerHTML === username ){
+		   console.log("search rem "+listUser[i].innerHTML );
+		   ulUs.removeChild(listUser[i]);
+		   listUser.splice(i,1);
+		   }
+		   }
+	  
+	});
+	
+	
+	socket.on('listUserOnLine', function(usrArray){
+	   
+		console.log("fffffffffffffffffffff");
+		console.log(usrArray.toString()+"+mfss");
+		var ulUs = document.querySelector('#listParticipant'); 
+		var elements=document.getElementsByClassName("userOn");
+		
+		if(listUser){
+		  for(var u=0; u<listUser.length; u++){
+
+		    ulUs.removeChild(listUser[u]);
+		    console.log("remov li "+listUser[u].innerHTML);
+			
+			
+         }
+		 listUser.splice(0,listUser.length);
+		  }
+		
+		for(var i=0; i<usrArray.length; i++){
+		console.log(""+i+"  "+usrArray[i]);
+		var li = document.createElement('LI');
+            li.className="userOn";
+			li.innerHTML =usrArray[i];
+            listUser.push(li);
+ 		    ulUs.appendChild(li);
+		 console.log("create li "+li.innerHTML);
+		}
+		  
+	});
+  
+  
+
+    
+
+   
+ 
+
+</script>
+</body>
+</html>

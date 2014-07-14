@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Chat</title>
+<link rel="stylesheet" type="text/css" href="/stylesheets/Css/style.css">
+<script src="socket.io/socket.io.js"></script>
+</head>
+<body onload="return false" reset="return false;" >
+
+<div style="float:right">
+ <form method="post" action="/logout">
+        <input type="submit" value="Logout" onclick="socket.emit('disconnectUser', username);">
+  </form>
+</div>
+<hr width="100%">
+<hr width="100%" style="clear:both;">
+
+
+<div align="center" class="userInfo">
+  <p>Login : <span id="name" style="color:green">
+     <%=user.username%>
+      </span>
+       <span id="statuses">
+	       <select id="statusOption">
+		       <option id="online" value="online" selected="selected" >online</option>
+			    <option id="away" value="away" >away</option>
+		   </select>
+	   </span>
+  </p>
+  <p>IdUser : <span id="_id" style="color:red;"><%=user._id%></span></p>
+ </div>
+<hr width="100%">
+<hr width="100%" style="clear:both;">
+<div align="Left"  id="tabbed_box_1" class="tabbed_box">
+    <h4>INFO : </h4>
+   <div  class="tabbed_area">
+	  
+	  <ul class="tabs">
+          <li><a href="javascript:tabSwitch('tab_1', 'content_1');" id="tab_1" class="active">Users</a></li>
+          <li><a href="javascript:tabSwitch('tab_2', 'content_2');" id="tab_2" >Rooms</a></li>
+          <li><a href="javascript:tabSwitch('tab_3', 'content_3');" id="tab_3">Message</a></li>
+       </ul>
+<!-- Это контейнеры содержимого -->    
+       <div id="content_1" class="content">
+         <span>Current interlocutor : </span>
+		 <span id="interlocutor" style="color:green">all</span>
+		 <p onclick="socket.emit('ChooseUser', null);" style="color:green;">Say everybody</p>
+   		 <h3>Users :</h2>
+             <div>
+			 <ul id="listParticipant"> 
+             
+			 </ul>
+            </div>
+       </div>
+   
+       <div id="content_2" class="content">
+          <h2>Rooms</h2>
+          <p>content2</p>
+       </div>
+  
+       <div id="content_3" class="content">
+          <h3>it is developing</h3>
+		  <ul id="Mesages" class="Mesages"></ul>
+       </div>
+  
+  </div>
+</div>
+
+<div  align="center" id="chat"  style="left:335px; top:204px; position: absolute;" height="50px">
+         <textarea cols="50" id="messages" rows="10" wrap="soft | hard"  tabindex="0" disabled></textarea>
+</div>
+<div  id="text" style="left:335px; top:380px; position: absolute">
+ <textarea cols="50" rows="5" id="textForSend" tabindex="0" wrap="soft | hard"></textarea>
+		<br>
+		<br>
+  <div align="center">
+  <input type="button" onclick="javascript:sendMessage()" value="send Message">
+  </div>
+  
+</div> 
+<script>
+    var socket=io.connect();
+    var flagIsConnected=true;
+    var flagisred=false;
+    var form=document.querySelector('#chat>form');
+    var ul=document.querySelector('#chat>ul');
+    var username=document.getElementById('name').innerHTML;
+    var currentUserArray= new Array();
+	var timer;
+    var timerUsers;
+	var listUser = new Array();
+	var userSocket=null;
+	var userStatus;
+	
+ 
+ 
+ function stopTimer(){
+  clearInterval(timer);
+ };
+ 
+function isConnect(username){
+ if(!flagisred){
+ printStatus("connection is lost "+username);
+ flagisred=true;
+ };
+
+if(!flagIsConnected){	
+console.log("connect lost");
+}else{
+console.log("connect is fixed");
+}
+};
+ function startTimer(username){
+  timer = setInterval("isConnect(username);",3000);
+ };
+
+   
+function tabSwitch(new_tab, new_content) {
+
+        document.getElementById('content_1').style.display = 'none';
+        document.getElementById('content_2').style.display = 'none';
+        document.getElementById('content_3').style.display = 'none';
+        document.getElementById(new_content).style.display = 'block';   
+
+        document.getElementById('tab_1').className = '';
+        document.getElementById('tab_2').className = '';
+        document.getElementById('tab_3').className = '';
+        document.getElementById(new_tab).className = 'active';          
+
+}
+
+
+function sendMessage(){
+ var textA= document.getElementById("textForSend");
+ var text=textA.value;
+ textA.value="";
+ 
+  socket.emit('message',username, text, userSocket, function(data){
+              
+            });
+ }
+ 
+    
+	function printMessage(text) {
+        var textarea = document.getElementById("messages");//querySelector('#chat>ul');   
+		 var valuet = textarea.value;	
+		 valuet=valuet.trim()+"\n"+text.trim();	
+		textarea.innerHTML=valuet.trim();
+		
+		
+	
+		
+    }
+
+    function printStatus(status) {
+        var ul = document.getElementById("Mesages");
+        var li = document.createElement('LI');
+        var i = document.createElement('i');
+        i.innerHTML = status;
+
+        li.appendChild(i);
+       ul.appendChild(li);
+    };
+	
+	
+    socket.on('message', function(usernameLoad, text, callback){
+      var strNote=usernameLoad.trim()+": "+text.trim()+" ";
+	  printMessage(strNote.trim());
+    });
+	
+	socket.on('connect',function(){
+	
+	  printStatus("Connection is done");
+	
+	if(!flagIsConnected){
+	
+	  var getList="Upload";
+	
+	  socket.emit('connectUpload',getList);
+	}
+	
+	socket.on('connectUpload',function(usrArray){
+	   
+	
+	    var ulUs = document.querySelector('#listParticipant'); 
+		
+		
+		if(listUser){
+		  for(var u=0; u<listUser.length; u++){    
+		   
+		   ulUs.removeChild(listUser[u]);  
+         }
+		listUser.splice(0,listUser.length); 
+		  }
+		
+		for(var i=0; i<usrArray.length; i++){
+		
+		var li = document.createElement('LI');
+            li.className="userOn";
+			li.innerHTML =usrArray[i];
+            listUser.push(li);
+ 		    ulUs.appendChild(li);
+		 
+		}	
+	});	
+	
+	 if(!flagIsConnected){
+	  stopTimer();
+	  flagIsConnected = true;
+	  flagisred=false;  
+	 }
+	
+	});
+	
+	socket.on('connection', function(){
+	 
+	 socket.emit('connectUser', username);	
+	
+	});
+	
+	socket.on('disconnect', function(){
+	flagIsConnected =false;
+	startTimer(username);
+    return;
+	
+     });
+    
+	
+	 socket.on('connectUser', function(username){
+	 	
+	           printMessage(username.trim()+" : is connected");
+			 
+	
+	});
+	
+	socket.on('disconnectUser', function(username){
+	  printMessage(username.trim()+" : is disconnected");	   
+      var ulUs = document.querySelector('#listParticipant'); 	  
+		 for(var i=0; i<listUser.length ;i++){
+		if(listUser[i].innerHTML === username ){
+		  
+		   ulUs.removeChild(listUser[i]);
+		   listUser.splice(i,1);
+		   }
+		   }
+	  
+	});
+	
+	
+	socket.on('listUserOnLine',function(usrArray){
+		
+		var ulUs = document.querySelector('#listParticipant'); 
+		var elements=document.getElementsByClassName("userOn");	
+		if(listUser){
+		  for(var u=0; u<listUser.length; u++){
+
+		    ulUs.removeChild(listUser[u]);
+		   		
+         }
+		 listUser.splice(0,listUser.length);
+		  }
+		
+		for(var i=0; i<usrArray.length; i++){
+		console.log(""+i+"  "+usrArray[i]);
+		var li = document.createElement('LI');
+            li.className="userOn";
+			li.innerHTML =usrArray[i];
+			li.setAttribute("onclick", "socket.emit('ChooseUser', this.innerHTML );");		
+			li.setAttribute("style","color:green;");		
+			li.setAttribute("id",""+usrArray[i]+"");	   
+     		listUser.push(li);
+ 		    ulUs.appendChild(li);
+		    
+		}
+		  
+	});
+  
+  
+
+    socket.on('ChooseUser', function(data){
+	 	      var data = JSON.parse (data);
+			   userSocket=data.id;
+	          
+			  var interlocutor = document.getElementById("interlocutor");
+			      if(data.username){
+				  interlocutor.innerHTML=data.username;
+				  
+				  }else{
+				  interlocutor.innerHTML="all";
+				  }
+			  
+	});
+ 
+  
+
+ 
+ 
+
+</script>
+</body>
+</html>
